@@ -54,9 +54,10 @@ create table Fisioterapeuta
 	   (CREFITO					 char(7) primary key,
 		nome					 varchar(100) not null,
 		data_nasc				 date not null,
-		CEP						 char(8) not null,
+		CEP						 char(8) notull,
 		complemento				 varchar(60),
-		percent_recebido		 float not null);
+		percent_recebido		 float not null,
+		CPF						 char(11) unique);
 
 create table TelefoneFisioterapeuta
 	   (telefone				varchar(11),
@@ -131,6 +132,13 @@ create table Sessao
 		primary key(data_hora, Paciente_CPF));
 
 
+-------------------------------------------
+------------------VIEWS--------------------
+-------------------------------------------
+create view NomeTelefonePaciente
+	   as select nome, telefone
+	   from (Paciente join TelefonePaciente
+	   		 on CPF = Paciente_CPF)
 
 -------------------------------------------
 -----------------INSERTS-------------------
