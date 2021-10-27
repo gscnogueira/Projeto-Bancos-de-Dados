@@ -29,11 +29,11 @@ class Paciente:
             db.commit()
             cursor.close()
 
-    def delete(self, paciente):
+    def delete(self, cpf):
         cursor = db.cursor()
         try:
             cursor.execute(f"delete from {self.TABLE} where CPF = %s",
-                           (paciente.CPF,))
+                           (cpf,))
         except mysql.connector.Error as err:
             print(err)
         finally:
@@ -56,6 +56,29 @@ class Paciente:
         finally:
             db.commit()
             cursor.close()
+
+    def list(self):
+        cursor = db.cursor()
+        op = ("select cpf, nome from Paciente "
+              "order by nome")
+        try:
+            cursor.execute(op)
+            return [x for x in cursor]
+        except mysql.connector.Error as err:
+            print(err)
+
+    def dados(self, cpf):
+        cursor = db.cursor(dictionary=True)
+        op = ("select * from Paciente "
+              "where CPF = %s")
+        try:
+            cursor.execute(op, ( cpf, ))
+            return next(cursor)
+        except mysql.connector.Error as err:
+            print(err)
+
+
+
 
 
 class Fisioterapeuta:
@@ -105,10 +128,8 @@ class Fisioterapeuta:
 
         placeholders = [column+' = %s' for column in columns]
         placeholders = ','.join(placeholders)
-        print(placeholders)
         op = (f"update {self.TABLE} set " + placeholders
               +f" where CREFITO = '{fisio.CREFITO}'")
-        print(op)
 
         cursor = db.cursor()
         try:
@@ -146,6 +167,7 @@ class Telefone:
         finally:
             cursor.close()
         return telefones
+
 
 
 

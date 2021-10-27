@@ -45,6 +45,7 @@ class Pessoa:
 
     @nome.setter
     def nome(self, nome):
+        nome = nome.upper()
         if len(nome) > self.TAM_NOME:
             raise NomeError()
         if not len(nome):

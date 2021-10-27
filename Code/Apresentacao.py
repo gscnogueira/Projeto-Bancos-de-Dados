@@ -3,15 +3,43 @@ import Entidades
 import DAO
 
 
+def freeze(window):
+    for e in window.element_list():
+        if isinstance(e, (sg.Button,sg.Listbox, ) ):
+            e.update(disabled = True)
+
+def unfreeze(window):
+    for e in window.element_list():
+        if isinstance(e, sg.Button):
+            e.update(disabled = False)
+
+def confirmar_acao(mensagem="Deseja prosseguir com essa operação?"):
+    layout = [[sg.Text(mensagem)],
+              [sg.Button("Sim", expand_x=True),
+               sg.Button("Não", expand_x=True)]]
+
+    window = sg.Window("Confirme a operação", layout,
+                       text_justification='center',
+                       keep_on_top=True)
+
+    event, values = window.read()
+
+    window.close()
+
+    return event == 'Sim'
+
+
 class Paciente:
-    DAOPaciente = DAO.Paciente()  
+    DAO = DAO.Paciente()
+
     def cadastro(self):
         layout = [[sg.Text("Preencha os campos a seguir")],
                   [sg.Text("Nome:")],
                   [sg.Input(key='nome')],
                   [sg.Text(size=(40, 1), k='err-nome')],
                   [sg.Text("Data de Nascimento:")],
-                  [sg.Input(key='dt_nasc', default_text='dd/mm/aaaa')],
+                  [sg.Input(key='dt_nasc',
+                            default_text='dd/mm/aaaa')],
                   [sg.Text(size=(40, 1), k='err-dt_nasc')],
                   [sg.Text("CPF")],
                   [sg.Input(key='cpf')],
@@ -22,10 +50,11 @@ class Paciente:
                   [sg.Text("Complemento")],
                   [sg.Input(key='complemento')],
                   [sg.Text(size=(40, 1), k='err-complemento')],
-                  [sg.Button('Ok', bind_return_key=1), sg.Button('Cancelar')]
+                  [sg.Button('Ok', bind_return_key=1),
+                   sg.Button('Cancelar')]
                   ]
 
-        window = sg.Window('test', layout, location=(683, 384))
+        window = sg.Window('test', layout)
 
         while True:
             event, values = window.read()
@@ -66,12 +95,138 @@ class Paciente:
                 is_okay &= 0
             if is_okay:
                 print(paciente.__dict__)
-                self.DAOPaciente.insert(paciente)
+                self.DAO.insert(paciente)
                 break
 
         window.close()
 
+    def _lista_pacientes(self):
+        lista = [(cpf, nome) for cpf, nome in
+                 self.DAO.list()]
+        lista = [' - '.join(e) for e in lista]
+        return lista
+
+    def display(self):
+
+        paciente_column = [[sg.Listbox(values=self._lista_pacientes(),
+                                       size=(60, 20),
+                                       k="-LIST-",
+                                       horizontal_scroll=True,
+                                       enable_events=True)],
+                           [sg.Button("Adicionar Paciente",
+                                      expand_x = True,
+                                      k = "-ADD-")]]
+
+        dados_column = [[sg.Text("Selecione um paciente",
+                                 size=(60, 1),
+                                 justification='center',
+                                 k="-TXT-")],
+                        [sg.Text(k="-NOME-", size=(60, 1))],
+                        [sg.Text(k="-CPF-", size=(60, 1))],
+                        [sg.Text(k="-DATE-", size=(60, 1))],
+                        [sg.Text(k="-CEP-", size=(60, 1))],
+                        [sg.Text(k="-COMP-", size=(60, 1))],
+                        [sg.Button("Deletar",
+                                   k="-DEL-",
+                                   visible=False,
+                                   disabled=True,
+                                   expand_x=True)]
+                        ]
+
+        layout = [[sg.Column(paciente_column),
+                   sg.VSeparator(),
+                   sg.Column(dados_column)],
+                  [sg.Button("Sair", k = "-CANCEL-" )]]
+        window = sg.Window("Consulta Paciente", layout)
+
+        while True:
+            event, values = window.read()
+            if event == sg.WIN_CLOSED or event == '-CANCEL-':
+                break
+
+            elif event == "-LIST-":
+                selecionado = values["-LIST-"][0].split(' - ')
+                cpf = selecionado[0]
+                paciente = self.DAO.dados(cpf)
+                window['-TXT-'].update('')
+                window['-NOME-'].update(
+                    "Nome: {}".format(paciente['nome']))
+                window['-CPF-'].update(
+                    "CPF: {}".format(paciente['CPF']))
+                window['-DATE-'].update(
+                    "Data de Nascimento: {}".format(paciente['data_nasc'].strftime("%d/%m/%Y")))
+                window['-CEP-'].update(
+                    "CEP: {}".format(paciente['CEP']))
+                window['-COMP-'].update('')
+                if (paciente['complemento']):
+                    window['-COMP-'].update(
+                        "Complemento: {}".format(paciente['complemento']))
+                window['-DEL-'].update(disabled=False,
+                                       visible=True)
+
+            elif event == '-DEL-':
+
+                window['-DEL-'].update(disabled=True)
+                window['-LIST-'].update(disabled=True)
+                window['-CANCEL-'].update(disabled=True)
+
+                if confirmar_acao():
+
+                    self.DAO.delete(cpf)
+                    window['-LIST-'].update(self._lista_pacientes(), disabled = False)
+                    window['-TXT-'].update("Selecione um paciente")
+                    window['-NOME-'].update('')
+                    window['-CPF-'].update('')
+                    window['-DATE-'].update('')
+                    window['-CEP-'].update('')
+                    window['-COMP-'].update('')
+                    window['-DEL-'].update(visible = False)
+
+                else:
+                    window['-DEL-'].update(disabled=False)
+
+
+                window['-CANCEL-'].update(disabled = False)
+                window['-LIST-'].update(disabled = False)
+
+            elif event == '-ADD-':
+                freeze(window)
+                self.cadastro()
+                unfreeze(window)
+                window['-LIST-'].update(self._lista_pacientes(), disabled = False)
+                
+            
+
+        window.close()
+
+
+def menu_inicial():
+    layout = [[sg.Text("Sistema Gerenciador de Clínicas", font = "Helvetica 26 bold")],
+              [sg.Button("Pacientes", expand_x=True, k = '-PAC-'  )],
+              [sg.Button("Funcionários", expand_x=True  )],
+              [sg.Button("Planos de Saúde", expand_x=True  )],
+              [sg.Button("Sessões", expand_x=True  )],
+              [sg.Button("Sair", expand_x=True, k = '-QUIT-'  )]
+              ]
+    window = sg.Window("Sistema Gerenciador de Clínicas", layout,
+                       text_justification = 'center')
+
+
+    while True:
+
+        event, values = window.read()
+
+        freeze(window)
+        if  event == '-QUIT-':
+            break
+        if event == '-PAC-':
+            ap = Paciente()
+            ap.display()
+
+        unfreeze(window)
+
+
+    window.close()
 
 if __name__ == '__main__':
-    ap = Paciente()
-    ap.cadastro()
+    menu_inicial()

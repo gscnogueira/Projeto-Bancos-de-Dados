@@ -144,15 +144,17 @@ create view NomeTelefonePaciente
 -----------------INSERTS-------------------
 -------------------------------------------
 
-insert into PlanoDeSaude values('123456','empresa muito legal demais')
 
-insert into Paciente
-	   values('04827523193',
-	   'Gabriel da Silva Corvino Nogueira',
-	   '2000-09-16', '71515030', null);
+select * from Paciente;
 
-insert into Paciente_has_PlanoDeSaude values
-	   ('04827523193', '123456', '1231245');
+
+insert into Paciente (CPF, nome,data_nasc,CEP,complemento)
+values ('14978241090', 'GABRIEL DA SILVA CORVINO NOGUEIRA', '2000-09-16', '79816126', 'Casa 16'),
+	   ('15956021004', 'RICHARD MATTHEW STALLMAN', '1953-03-16', '65044465', NULL),
+	   ('98637381073', 'LINUS BENEDICT TORVALDS', '1969-12-28', '24725380', 'Apt 204'),
+	   ('49250235003', 'GUIDO VAN ROSSUM', '1956-01-31', '77828080', NULL),
+	   ('69600738041', 'BRIAN WILSON KERNIGHAN', '1942-01-01', '77023670', 'Apt 508');
+
 
 
 
