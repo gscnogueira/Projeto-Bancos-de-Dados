@@ -5,6 +5,32 @@
 
 from datetime import date
 
+class CPFError(ValueError):
+    def __init__(self, message = 'CPF inválido'):
+        self.message = message
+        super().__init__(self.message)
+
+
+class NomeError(ValueError):
+    def __init__(self, message = 'Nome inválido'):
+        self.message = message
+        super().__init__(self.message)
+
+
+class CEPError(ValueError):
+    def __init__(self, message = 'CEP inválido'):
+        self.message = message
+        super().__init__(self.message)
+
+class DataError(ValueError):
+    def __init__(self, message = 'Data inválida'):
+        self.message = message
+        super().__init__(self.message)
+
+class ComplementoError(ValueError):
+    def __init__(self, message = 'Complemento inválido'):
+        self.message = message
+        super().__init__(self.message)
 
 class Pessoa:
 
@@ -20,25 +46,25 @@ class Pessoa:
     @nome.setter
     def nome(self, nome):
         if len(nome) > self.TAM_NOME:
-            raise ValueError('O nome de uma pessoa  pode ter no máximo'
-                             f' {self.TAM_NOME} caracteres')
+            raise NomeError()
+        if not len(nome):
+            raise NomeError
+        if nome.isspace():
+            raise NomeError
         if not all(c.isalpha() or c.isspace() for c in nome):
-            raise ValueError('O nome de uma pessoa deve ser composto'
-                             ' apenas por caracteres alfabéticos')
+            raise NomeError()
         self._nome = nome
 
     @staticmethod
     def _valida_cpf(CPF):
         v1, v2 = [0, 0]
-        for i in range(0, 9):
-            v1 += int(CPF[i])*(9-(i % 10))
-            v2 += int(CPF[i])*(9-((i+1) % 10))
-        v1 %= 11
-        v1 %= 10
-        v2 += v1*9
-        v2 %= 11
-        v2 %= 10
-        return int(CPF[-1]) == v1 and int(CPF[-2]) == v2
+        for i in range (0,9):
+            v1 +=int( CPF[i] )*(10-i)
+            v2 +=int( CPF[i] )*(11-i)
+        v1 = ((v1*10)%11)%10
+        v2+=2*v1
+        v2 = ((v2*10)%11)%10
+        return int(CPF[-2]) == v1 and int(CPF[-1]) == v2
 
     @property
     def CPF(self):
@@ -47,11 +73,11 @@ class Pessoa:
     @CPF.setter
     def CPF(self, CPF):
         if len(CPF) != self.TAM_CPF:
-            raise ValueError('O CPF deve possuir 11 digitos')
+            raise CPFError()
         if not CPF.isnumeric():
-            raise ValueError('O CPF deve ser composto apenas por digitos')
+            raise CPFError()
         if not self._valida_cpf(CPF):
-            raise ValueError('CPF inválido')
+            raise CPFError()
         self._CPF = CPF
 
     @property
@@ -60,7 +86,18 @@ class Pessoa:
 
     @dt_nasc.setter
     def dt_nasc(self, dt):
-        self._dt_nasc = dt
+        dt = dt.split('/')
+        if len(dt) != 3:
+            raise DataError
+        if not all(x.isnumeric() for x in dt):
+            raise DataError
+        dt = [int(x) for x in dt]
+        try:
+            data = date(dt[2], dt[1],dt[0])
+            self._dt_nasc = data
+        except Exception :
+            raise DataError
+
 
     @property
     def CEP(self):
@@ -69,7 +106,7 @@ class Pessoa:
     @CEP.setter
     def CEP(self, CEP):
         if len(CEP) != self.TAM_CEP:
-            raise ValueError('CEP deve ter 8 digitos')
+            raise CEPError()
         self._CEP = CEP
 
     @property
@@ -79,15 +116,13 @@ class Pessoa:
     @complemento.setter
     def complemento(self, complemento):
         if complemento != None and len(complemento) > self.TAM_COMPLEMENTO:
-            raise ValueError('Complemento deve ter no máximo 60 caracteres')
-        self._complemento = complemento
-
-    def __init__(self, nome, cpf, dt_nasc, cep, complemento=None):
-        self.CPF = cpf
-        self.nome = nome
-        self.dt_nasc = dt_nasc
-        self.CEP = cep
-        self.complemento = complemento
+            raise ComplementoError()
+        if complemento.isspace():
+            raise ComplementoError()
+        if complemento.isspace() or not len(complemento):
+            self._complemento = None
+        else:
+            self._complemento = complemento
 
 
 class Paciente(Pessoa):
@@ -120,11 +155,6 @@ class Fisioterapeuta(Pessoa):
         if crefito[-1] != 'F':
             raise ValueError('CREFITO informado contém último digito inválido')
         self._CREFITO = crefito
-
-    def __init__(self,crefito, nome, cpf, dt_nasc, cep, complemento=None, percent = None):
-        super().__init__(nome, cpf, dt_nasc, cep, complemento)
-        self.percent_recebido = percent
-        self.CREFITO = crefito
 
 
 class Telefone:

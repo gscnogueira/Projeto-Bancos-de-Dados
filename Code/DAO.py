@@ -11,6 +11,7 @@ class Paciente:
 
     def insert(self, paciente):
         cursor = db.cursor()
+
         try:
             cursor.execute(
                 f"insert into {self.TABLE} values (%s, %s, %s,%s,%s)",
