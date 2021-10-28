@@ -114,12 +114,16 @@ class Paciente:
                 window['err-dt_nasc'].update(err, text_color='red')
                 is_okay &= 0
             if is_okay:
-
-                if cpf_existente:
-                    self.DAO.update(cpf_existente,paciente)
-                else:
-                    self.DAO.insert(paciente)
-                break
+                try:
+                    if cpf_existente:
+                        self.DAO.update(cpf_existente,paciente)
+                    else:
+                        self.DAO.insert(paciente)
+                    break
+                except ValueError as err:
+                    window['err-cpf'].update(err, text_color='red')
+                except Exception as err:
+                    window['err-complemento'].update(err, text_color='red')
 
         window.close()
         return not cancelou
@@ -176,7 +180,7 @@ class Paciente:
             if event == sg.WIN_CLOSED or event == '-CANCEL-':
                 break
 
-            elif event == "-LIST-":
+            elif event == "-LIST-" and values["-LIST-"]:
                 selecionado = values["-LIST-"][0].split(' - ')
                 cpf = selecionado[0]
                 paciente = self.DAO.dados(cpf)

@@ -22,9 +22,9 @@ class Paciente:
                  paciente.complemento))
         except mysql.connector.Error as err:
             if(err.errno == errorcode.ER_DUP_ENTRY):
-                print('CPF já registrado')
+                raise ValueError("CPF já está cadastrado")
             else:
-                print(err)
+                raise Exception("Erro no aceso à base de dados")
         finally:
             db.commit()
             cursor.close()
@@ -52,7 +52,10 @@ class Paciente:
         try:
             cursor.execute(op, paciente_atualizado.__dict__)
         except mysql.connector.Error as err:
-            print(err)
+            if(err.errno == errorcode.ER_DUP_ENTRY):
+                raise ValueError("CPF já está cadastrado")
+            else:
+                raise Exception("Erro no aceso à base de dados")
         finally:
             db.commit()
             cursor.close()
