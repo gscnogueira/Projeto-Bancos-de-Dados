@@ -40,7 +40,7 @@ class Paciente:
             db.commit()
             cursor.close()
 
-    def update(self, paciente, paciente_atualizado):
+    def update(self, cpf, paciente_atualizado):
         cursor = db.cursor()
         op = (f"update {self.TABLE} set"
               " nome = %(_nome)s,"
@@ -48,7 +48,7 @@ class Paciente:
               " data_nasc  = %(_dt_nasc)s,"
               " CEP = %(_CEP)s,"
               " complemento = %(_complemento)s"
-              " where CPF = '50405152000'")
+              " where CPF = '{}'".format(cpf))
         try:
             cursor.execute(op, paciente_atualizado.__dict__)
         except mysql.connector.Error as err:

@@ -1,8 +1,18 @@
 import PySimpleGUI as sg
 import Entidades
+from datetime import date
 import DAO
 
 
+def consulta_dict(dic,key):
+    try:
+        v = dic[key]
+        if isinstance(v,date):
+            v = v.strftime("%d/%m/%Y")
+
+        return v
+    except Exception:
+        return ''
 def freeze(window):
     for e in window.element_list():
         if isinstance(e, (sg.Button,sg.Listbox, ) ):
@@ -10,7 +20,7 @@ def freeze(window):
 
 def unfreeze(window):
     for e in window.element_list():
-        if isinstance(e, sg.Button):
+        if isinstance(e, (sg.Button,sg.Listbox, ) ):
             e.update(disabled = False)
 
 def confirmar_acao(mensagem="Deseja prosseguir com essa operação?"):
@@ -32,23 +42,31 @@ def confirmar_acao(mensagem="Deseja prosseguir com essa operação?"):
 class Paciente:
     DAO = DAO.Paciente()
 
-    def cadastro(self):
+    def cadastro(self, cpf_existente = None):
+        dados = {}
+        if(cpf_existente):
+            dados =  self.DAO.dados(cpf_existente)
+
         layout = [[sg.Text("Preencha os campos a seguir")],
                   [sg.Text("Nome:")],
-                  [sg.Input(key='nome')],
+                  [sg.Input(key='nome',
+                            default_text = consulta_dict(dados, 'nome'))],
                   [sg.Text(size=(40, 1), k='err-nome')],
                   [sg.Text("Data de Nascimento:")],
                   [sg.Input(key='dt_nasc',
-                            default_text='dd/mm/aaaa')],
+                            default_text=consulta_dict(dados, 'data_nasc'))],
                   [sg.Text(size=(40, 1), k='err-dt_nasc')],
                   [sg.Text("CPF")],
-                  [sg.Input(key='cpf')],
+                  [sg.Input(key='cpf',
+                            default_text = consulta_dict(dados,'CPF'))],
                   [sg.Text(size=(40, 1), k='err-cpf')],
                   [sg.Text("CEP")],
-                  [sg.Input(key='cep')],
+                  [sg.Input(key='cep',
+                            default_text = consulta_dict(dados, 'CEP'))],
                   [sg.Text(size=(40, 1), k='err-cep')],
                   [sg.Text("Complemento")],
-                  [sg.Input(key='complemento')],
+                  [sg.Input(key='complemento',
+                            default_text = consulta_dict(dados,'complemento'))],
                   [sg.Text(size=(40, 1), k='err-complemento')],
                   [sg.Button('Ok', bind_return_key=1),
                    sg.Button('Cancelar')]
@@ -56,10 +74,12 @@ class Paciente:
 
         window = sg.Window('test', layout)
 
+        cancelou = False
         while True:
             event, values = window.read()
 
             if event == sg.WINDOW_CLOSED or event == 'Cancelar':
+                cancelou = True
                 break
 
             error_fields = ['err-cpf', 'err-nome', 'err-cep',
@@ -94,11 +114,15 @@ class Paciente:
                 window['err-dt_nasc'].update(err, text_color='red')
                 is_okay &= 0
             if is_okay:
-                print(paciente.__dict__)
-                self.DAO.insert(paciente)
+
+                if cpf_existente:
+                    self.DAO.update(cpf_existente,paciente)
+                else:
+                    self.DAO.insert(paciente)
                 break
 
         window.close()
+        return not cancelou
 
     def _lista_pacientes(self):
         lista = [(cpf, nome) for cpf, nome in
@@ -126,10 +150,17 @@ class Paciente:
                         [sg.Text(k="-DATE-", size=(60, 1))],
                         [sg.Text(k="-CEP-", size=(60, 1))],
                         [sg.Text(k="-COMP-", size=(60, 1))],
-                        [sg.Button("Deletar",
+                        [sg.Button("Atualizar",
+                                   k="-UPD-",
+                                   visible=False,
+                                   disabled=True,
+                                   # size = (10,1),
+                                   expand_x=True),
+                         sg.Button("Deletar",
                                    k="-DEL-",
                                    visible=False,
                                    disabled=True,
+                                   # size = (10,1),
                                    expand_x=True)]
                         ]
 
@@ -139,6 +170,7 @@ class Paciente:
                   [sg.Button("Sair", k = "-CANCEL-" )]]
         window = sg.Window("Consulta Paciente", layout)
 
+        cpf = ''
         while True:
             event, values = window.read()
             if event == sg.WIN_CLOSED or event == '-CANCEL-':
@@ -163,13 +195,13 @@ class Paciente:
                         "Complemento: {}".format(paciente['complemento']))
                 window['-DEL-'].update(disabled=False,
                                        visible=True)
+                window['-UPD-'].update(disabled=False,
+                                       visible=True)
 
             elif event == '-DEL-':
 
-                window['-DEL-'].update(disabled=True)
-                window['-LIST-'].update(disabled=True)
-                window['-CANCEL-'].update(disabled=True)
 
+                freeze(window)
                 if confirmar_acao():
 
                     self.DAO.delete(cpf)
@@ -181,19 +213,33 @@ class Paciente:
                     window['-CEP-'].update('')
                     window['-COMP-'].update('')
                     window['-DEL-'].update(visible = False)
-
-                else:
-                    window['-DEL-'].update(disabled=False)
+                    window['-UPD-'].update(visible = False)
 
 
-                window['-CANCEL-'].update(disabled = False)
-                window['-LIST-'].update(disabled = False)
+                unfreeze(window)
+
 
             elif event == '-ADD-':
                 freeze(window)
                 self.cadastro()
                 unfreeze(window)
-                window['-LIST-'].update(self._lista_pacientes(), disabled = False)
+                window['-LIST-'].update(self._lista_pacientes())
+
+            elif event == '-UPD-':
+                freeze(window)
+                if(cpf and self.cadastro(cpf)):
+                    unfreeze(window)
+                    window['-LIST-'].update(self._lista_pacientes())
+                    window['-TXT-'].update("Selecione um paciente")
+                    window['-NOME-'].update('')
+                    window['-CPF-'].update('')
+                    window['-DATE-'].update('')
+                    window['-CEP-'].update('')
+                    window['-COMP-'].update('')
+                    window['-DEL-'].update(visible = False)
+                    window['-UPD-'].update(visible = False)
+                else:
+                    unfreeze(window)
                 
             
 
