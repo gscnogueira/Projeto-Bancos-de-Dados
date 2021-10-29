@@ -4,6 +4,7 @@
 
 use CLINICA;
 
+drop table if exists Sessao_trata_Doenca;
 drop table if exists Sessao;
 drop table if exists Restricao;
 drop table if exists EmailPaciente;
@@ -135,7 +136,7 @@ create table Box
 create table Sessao
 	   (id_Horario				int,
 	    id_DiaSemana			int,
-		data_secao				date,
+		data_sessao				date,
 		idBox					int references Box(idBox),
 	    Paciente_CPF			char(11) not null references Paciente(CPF) ,
 		particular				TINYINT not null,
@@ -147,33 +148,54 @@ create table Sessao
 		FOREIGN KEY(id_Horario, id_DiaSemana)
 				references PeriodoAtendimento(id_Horario,id_DiaSemana),
 		primary key(id_Horario, id_DiaSemana,
-					data_secao, idBox),
+					data_sessao, idBox),
 		UNIQUE(id_Horario, id_DiaSemana,
-			   data_secao, idBox, Paciente_CPF));
+			   data_sessao, idBox, Paciente_CPF));
 
 create table Sessao_trata_Doenca
 	   (id_Horario				int,
 	    id_DiaSemana			int,
-		data_secao				date,
+		data_sessao				date,
 		idBox					int,
 		CID						varchar(7),
-		foreign key(id_Horario, id_DiaSemana, data_secao, idBox)
-				references Sessao(id_Horario, id_DiaSemana, Data_Secao, idBox),
-		primary key(id_Horario, id_DiaSemana, data_secao, idBox, CID)
+		foreign key(id_Horario, id_DiaSemana, data_sessao, idBox)
+				references Sessao(id_Horario, id_DiaSemana, Data_Sessao, idBox),
+		primary key(id_Horario, id_DiaSemana, data_sessao, idBox, CID)
 	   );
 
 -------------------------------------------
 ------------------VIEWS--------------------
 -------------------------------------------
--- create view NomeTelefonePaciente
--- 	   as select nome, telefone
--- 	   from (Paciente join TelefonePaciente
--- 	   		 on CPF = Paciente_CPF)
+
+create view VSessaoPlano as
+	   select id_horario, id_diasemana, data_sessao, idbox, paciente_cpf, razao_social as plano from
+			     (Sessao left outer join PlanoDeSaude on id = id_PlanoDeSaude);
+
+create view VFisioterapeutaCrefito as
+	   select CREFITO as Fisioterapeuta_CREFITO, nome as fisio
+	   from Fisioterapeuta;
+
+create view VInfoSessao as
+	   select  id_horario, id_diasemana, data_sessao, idbox, paciente_cpf, plano,fisio from
+	   ((VSessaoPlano) natural join (
+	   				   VFisioterapeutaCrefito natural join PeriodoAtendimento));
+
+
+------------------------------------------
+----------------PROCEDURES----------------
+------------------------------------------
+
+-- delimiter //
+-- create Procedure sessao_cpf (cpf CHAR(11))
+-- BEGIN
+-- 	select * from Sessao
+-- 	where Paciente_CPF = cpf;
+-- END//
+-- delimiter ;
 
 -------------------------------------------
------------------inserts-------------------
+-----------------INSERTS-------------------
 -------------------------------------------
-
 
 insert into Paciente (CPF, nome,data_nasc,CEP,complemento)
 values ('14978241090', 'SIMONE HELOISE LIMA', '2000-09-16', '72726600', 'Casa 16'),
@@ -338,24 +360,19 @@ values (1,1,'332497F' ), (2,1,'332497F'),(3,1,'332497F'),(4,1,'332497F'),
 	   (1,5,'643673F' ), (2,5,'643673F'),(3,5,'643673F'),(4,5,'643673F'),
 	   (5,5,'888780F' ), (6,5,'888780F'),(7,5,'888780F'),(8,5,'888780F');
 
-insert into Sessao (id_Horario, id_DiaSemana, data_secao, idBox, Paciente_CPF, particular, id_PlanoDeSaude, observacoes)
+insert into Sessao (id_Horario, id_DiaSemana, data_sessao, idBox, Paciente_CPF, particular, id_PlanoDeSaude, observacoes)
 values (1,1,'2021-10-25',3,'14978241090', 0,'000701', 'Primeira consulta do paciente' ),
 	   (1,1,'2021-10-25',1,'15956021004', 0,'000884', NULL ),
 	   (3,3,'2021-10-27',1,'98637381073', 0,'005711', NULL ),
 	   (4,5,'2021-10-28',1,'49250235003', 1, NULL, NULL ),
 	   (4,5,'2021-10-28',3,'14978241090', 0,'000701', 'Paciente evoluiu bem desde a última sessão' );
 
-insert into Sessao_trata_Doenca (id_Horario, id_DiaSemana, data_secao, idBox, CID)
+insert into Sessao_trata_Doenca (id_Horario, id_DiaSemana, data_sessao, idBox, CID)
 values (1,1,'2021-10-25',3,'M17.1'),
 	   (1,1,'2021-10-25',1,'M25.5'),
 	   (3,3,'2021-10-27',1,'M17.1'),
 	   (4,5,'2021-10-28',1,'S83.5'),
 	   (4,5,'2021-10-28',3,'M17.1');
- -- '14978241090'	   
- -- '15956021004'
- -- '98637381073'
- -- '49250235003'
- -- '69600738041'
 
 
 
