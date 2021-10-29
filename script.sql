@@ -4,6 +4,11 @@
 
 use CLINICA;
 
+drop view if exists VFisioterapeutaCrefito;
+drop view if exists VNomeCPFPaciente;
+drop view if exists VSessaoPlano;
+drop view if exists VInfoSessao;
+
 drop table if exists Sessao_trata_Doenca;
 drop table if exists Sessao;
 drop table if exists Restricao;
@@ -27,6 +32,7 @@ drop table if exists Paciente;
 drop table if exists Box;
 
 
+
 create table Paciente
 	   (CPF			CHAR(11) PRIMARY KEY,
 	    nome		varchar(100) NOT NULL,
@@ -48,12 +54,12 @@ create table EmailPaciente
 		primary key(email, Paciente_CPF));
 
 create table Restricao
-	   (descricao	 varchar(200),
-	   	Paciente_CPF char(11) references Paciente(CPF)
+	   ( id			 int primary key auto_increment,
+		Paciente_CPF char(11) not null references Paciente(CPF)
 					 on update cascade on delete cascade,
 		dt_inicio	 date,
 		dt_fim		 date,
-		primary key(Paciente_CPF, descricao));
+	    descricao	 varchar(200) not null);
 
 create table Fisioterapeuta		 
 	   (CREFITO					 char(7) primary key,
@@ -62,7 +68,8 @@ create table Fisioterapeuta
 		CEP						 char(8) not null,
 		complemento				 varchar(60),
 		percent_recebido		 float not null DEFAULT 10,
-		CPF						 char(11) unique not null);
+		CPF						 char(11) unique not null,
+		foto					 blob );
 
 create table TelefoneFisioterapeuta
 	   (telefone				varchar(11),
@@ -78,9 +85,9 @@ create table EmailFisioterapeuta
 
 
 create table Horario
-	   (id	                    int auto_increment primary key,
-	    tempo_inicio			time unique,
-		tempo_fim				time unique);
+	   (id_Horario              int auto_increment primary key,
+	    tempo_inicio			time unique not null,
+		tempo_fim				time unique not null);
 
 create table DiaSemana
 	   (id	                     int auto_increment primary key,
@@ -88,9 +95,10 @@ create table DiaSemana
 									  'Terça-Feira',
 									  'Quarta-Feira',
 									  'Quinta-Feira,',
-									  'Sexta-Feira') unique);
+									  'Sexta-Feira') unique not null);
+
 create table PeriodoAtendimento
-	   (id_Horario				int references Horario(id),
+	   (id_Horario				int references Horario(id_Horario),
 	    id_DiaSemana			int references DiaSemana(id),
 		Fisioterapeuta_CREFITO 	char(7) references Fisioterapeuta(CREFITO),
 		primary key(id_Horario, id_DiaSemana));
@@ -117,7 +125,7 @@ create table Procedimento
 
 create table Doenca
 	   (CID				varchar(7) primary key,
-	    descricao		varchar(200));
+	    descricao		varchar(200) not null);
 
 create table Doenca_has_Procedimento
 	   (Doenca_CID		varchar(7) references Doenca(CID)
@@ -137,7 +145,7 @@ create table Sessao
 	   (id_Horario				int,
 	    id_DiaSemana			int,
 		data_sessao				date,
-		idBox					int references Box(idBox),
+		idBox					int not null references Box(idBox) ,
 	    Paciente_CPF			char(11) not null references Paciente(CPF) ,
 		particular				TINYINT not null,
 		id_PlanoDeSaude			char(6) references PlanoDeSaude(id),
@@ -148,19 +156,19 @@ create table Sessao
 		FOREIGN KEY(id_Horario, id_DiaSemana)
 				references PeriodoAtendimento(id_Horario,id_DiaSemana),
 		primary key(id_Horario, id_DiaSemana,
-					data_sessao, idBox),
+					data_sessao, Paciente_CPF),
 		UNIQUE(id_Horario, id_DiaSemana,
-			   data_sessao, idBox, Paciente_CPF));
+			   data_sessao, idBox));
 
 create table Sessao_trata_Doenca
 	   (id_Horario				int,
 	    id_DiaSemana			int,
 		data_sessao				date,
-		idBox					int,
-		CID						varchar(7),
-		foreign key(id_Horario, id_DiaSemana, data_sessao, idBox)
-				references Sessao(id_Horario, id_DiaSemana, Data_Sessao, idBox),
-		primary key(id_Horario, id_DiaSemana, data_sessao, idBox, CID)
+		Paciente_CPF			char(11),
+		CID						varchar(7) references Doenca(CID),
+		foreign key(id_Horario, id_DiaSemana, data_sessao, Paciente_CPF)
+				references Sessao(id_Horario, id_DiaSemana, data_sessao, Paciente_CPF),
+		primary key(id_Horario, id_DiaSemana, data_sessao, Paciente_CPF, CID)
 	   );
 
 -------------------------------------------
@@ -168,30 +176,39 @@ create table Sessao_trata_Doenca
 -------------------------------------------
 
 create view VSessaoPlano as
-	   select id_horario, id_diasemana, data_sessao, idbox, paciente_cpf, razao_social as plano from
+	   select id_Horario, id_DiaSemana, data_sessao, idBox, Paciente_CPF, razao_social as
+	   PlanoDeSaude_nome, id as PlanoDeSaude_id , observacoes from
 			     (Sessao left outer join PlanoDeSaude on id = id_PlanoDeSaude);
 
 create view VFisioterapeutaCrefito as
-	   select CREFITO as Fisioterapeuta_CREFITO, nome as fisio
+	   select CREFITO as Fisioterapeuta_CREFITO, nome as Fisioterapeuta_nome
 	   from Fisioterapeuta;
 
+create view VNomeCPFPaciente as
+	   select CPF as Paciente_CPF, nome as Paciente_nome
+	   from Paciente;
+
 create view VInfoSessao as
-	   select  tempo_inicio, tempo_fim, data_sessao, idbox, paciente_cpf, plano,fisio from
-	   (((VSessaoPlano) natural join (
+	   select * from
+	   ((((VSessaoPlano) natural join (
 	   				   VFisioterapeutaCrefito natural join PeriodoAtendimento))
-		 join Horario on id_horario = id);
+		 natural join Horario) natural join VNomeCPFPaciente ) ;
 
 ------------------------------------------
 ----------------PROCEDURES----------------
 ------------------------------------------
 
--- delimiter //
--- create Procedure sessao_cpf (cpf CHAR(11))
--- BEGIN
--- 	select * from Sessao
--- 	where Paciente_CPF = cpf;
--- END//
--- delimiter ;
+delimiter //
+create Procedure procedimentos_sessao (cpf CHAR(11), horario int, dt_sessao date, idPlano char(6))
+BEGIN
+	select idProcedimento, descricao from ( Doenca_has_Procedimento natural join Procedimento ) where Doenca_CID in (
+		   select CID from Sessao_trata_Doenca
+		   where (Paciente_CPF = cpf
+		   		  and data_sessao = dt_sessao
+				  and id_Horario = horario))
+	and idPlanoDeSaude = idPlano order by descricao;
+END//
+delimiter ;
 
 -------------------------------------------
 -----------------INSERTS-------------------
@@ -230,12 +247,12 @@ values ('14978241090', '2021-10-20','2021-10-30', 'Paciente pós-operado em per�
 	   ('69600738041', null,null, 'Paciente possui lordose '),
 	   ('69600738041', '2021-10-28','2021-11-28', 'Paciente deve manter o braço imobilizado pelo período de um mês ');
 
-insert into Fisioterapeuta (CREFITO, nome,data_nasc,CEP, CPF)
-values ('493672F', 'SARAH ESTER CRISTIANE PINTO', '1974-01-11', '57303385','05204741046' ),
-       ('888780F', 'ARTHUR LORENZO VIANA', '1989-02-25', '76249970','51716868408' ),
-       ('332497F', 'MANUELA SIMONE SARA SILVEIRA', '1986-04-07', '12213579','35944858893' ),
-       ('643673F', 'OLIVER ENRICO RYAN GOMES', '1994-06-09', '79021200','83864139139' ),
-       ('583874F', 'MIGUEL JUAN MATEUS REZENDE', '1986-02-05', '65070971','02344314822' );
+insert into Fisioterapeuta (CREFITO, nome,data_nasc,CEP, CPF, foto)
+values ('493672F', 'SARAH ESTER CRISTIANE PINTO', '1974-01-11', '57303385','05204741046', LOAD_FILE('Sarah.jpg')),
+       ('888780F', 'ARTHUR LORENZO VIANA', '1989-02-25', '76249970','51716868408', LOAD_FILE('Arthur.jpg')),
+       ('332497F', 'MANUELA SIMONE SARA SILVEIRA', '1986-04-07', '12213579','35944858893', LOAD_FILE('Manuela.jpg')),
+       ('643673F', 'OLIVER ENRICO RYAN GOMES', '1994-06-09', '79021200','83864139139', LOAD_FILE('Oliver.jpg')),
+       ('583874F', 'MIGUEL JUAN MATEUS REZENDE', '1986-02-05', '65070971','02344314822', LOAD_FILE('Miguel.jpg'));
 
 insert into EmailFisioterapeuta (email, Fisioterapeuta_CREFITO)
 values ('ssarahestercristianepinto@sicredi.com.br', '493672F'),
@@ -367,12 +384,13 @@ values (1,1,'2021-10-25',3,'14978241090', 0,'000701', 'Primeira consulta do paci
 	   (4,5,'2021-10-28',1,'49250235003', 1, NULL, NULL ),
 	   (4,5,'2021-10-28',3,'14978241090', 0,'000701', 'Paciente evoluiu bem desde a última sessão' );
 
-insert into Sessao_trata_Doenca (id_Horario, id_DiaSemana, data_sessao, idBox, CID)
-values (1,1,'2021-10-25',3,'M17.1'),
-	   (1,1,'2021-10-25',1,'M25.5'),
-	   (3,3,'2021-10-27',1,'M17.1'),
-	   (4,5,'2021-10-28',1,'S83.5'),
-	   (4,5,'2021-10-28',3,'M17.1');
+insert into Sessao_trata_Doenca (id_Horario, id_DiaSemana, data_sessao, Paciente_CPF, CID)
+values (1,1,'2021-10-25','14978241090','M17.1'),
+	   (1,1,'2021-10-25','15956021004','M25.5'),
+	   (3,3,'2021-10-27','98637381073','M17.1'),
+	   (4,5,'2021-10-28','49250235003','S83.5'),
+	   (4,5,'2021-10-28','49250235003','M65.8'),
+	   (4,5,'2021-10-28','14978241090','M17.1');
 
 
 
