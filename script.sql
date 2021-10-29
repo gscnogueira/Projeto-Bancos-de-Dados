@@ -176,10 +176,10 @@ create view VFisioterapeutaCrefito as
 	   from Fisioterapeuta;
 
 create view VInfoSessao as
-	   select  id_horario, id_diasemana, data_sessao, idbox, paciente_cpf, plano,fisio from
-	   ((VSessaoPlano) natural join (
-	   				   VFisioterapeutaCrefito natural join PeriodoAtendimento));
-
+	   select  tempo_inicio, tempo_fim, data_sessao, idbox, paciente_cpf, plano,fisio from
+	   (((VSessaoPlano) natural join (
+	   				   VFisioterapeutaCrefito natural join PeriodoAtendimento))
+		 join Horario on id_horario = id);
 
 ------------------------------------------
 ----------------PROCEDURES----------------
