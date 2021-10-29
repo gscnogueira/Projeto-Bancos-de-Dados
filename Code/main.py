@@ -7,8 +7,7 @@ import copy
 from datetime import date
 
 if __name__ == '__main__':
-    paciente = Apresentacao.Paciente()
-    paciente.display()
+    Apresentacao.menu_inicial()
 
 
 

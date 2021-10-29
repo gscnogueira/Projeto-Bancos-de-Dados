@@ -129,52 +129,32 @@ class Pessoa:
 class Paciente(Pessoa):
     pass
 
-
-class Fisioterapeuta(Pessoa):
-
-    @property
-    def percent_recebido(self):
-        return self._percent_recebido
-
-    @percent_recebido.setter
-    def percent_recebido(self, percent):
-        if (percent) and not (0 < percent <100):
-            raise ValueError('Valor de percentual inválido')
-        self._percent_recebido = percent
+class Sessao:
 
     @property
-    def CREFITO(self):
-        return self._CREFITO
-
-    @CREFITO.setter
-    def CREFITO(self, crefito):
-        if len(crefito) != 7 :
-            raise ValueError('CREFITO deve conter 7 caracteres')
-        if not ( crefito[:-1] ).isnumeric():
-            raise ValueError(
-                'Os primeiros 6 caracteres de um CREFITO devem ser digitos')
-        if crefito[-1] != 'F':
-            raise ValueError('CREFITO informado contém último digito inválido')
-        self._CREFITO = crefito
-
-
-class Telefone:
-
-    @property
-    def numero(self):
-        return self._numero
-
-    @numero.setter
-    def numero(self, numero):
-        if len(numero) != 11 and len(numero) != 10:
-            raise ValueError(
-                'Numero de telefone deve ter entre 10 e 11 digitos')
-        if not numero.isnumeric():
-            raise ValueError(
-                'Numero de telefone deve ser composto apenas por digitos')
-        self._numero = numero
+    def data_sessao(self):
+        return self._data_sessao;
     
+    @data_sessao.setter
+    def data_sessao(self, dt):
+        dt = dt.split('/')
+        if len(dt) != 3:
+            raise DataError
+        if not all(x.isnumeric() for x in dt):
+            raise DataError
+        dt = [int(x) for x in dt]
+        try:
+            data = date(dt[2], dt[1],dt[0])
+            if data.weekday()>4:
+                raise DataError('Não há atendimentos na data escolhida')
+            self._data_sessao = data
+        except Exception :
+            raise DataError
 
-    def __init__(self,numero):
-        self.numero = numero
+
+
+
+
+
+
 
